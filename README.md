@@ -141,7 +141,7 @@ The easiest way to use this scaffolding is as a **GitHub template repository**. 
 
 ```bash
 # Create a new repo from this template
-gh repo create my-new-project --template YOUR_USERNAME/claude-playbook --public --clone
+gh repo create my-new-project --template smartwhale8/claude-playbook --public --clone
 cd my-new-project
 ```
 
@@ -380,7 +380,7 @@ That's it. The repo now shows a green **"Use this template"** button instead of 
 You can also use the template via CLI without visiting GitHub:
 
 ```bash
-gh repo create my-new-project --template YOUR_USERNAME/claude-playbook --public --clone
+gh repo create my-new-project --template smartwhale8/claude-playbook --public --clone
 ```
 
 ---
