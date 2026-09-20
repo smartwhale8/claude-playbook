@@ -5,6 +5,13 @@
 # To do it by hand: install https://github.com/apps/claude, then add either an
 # ANTHROPIC_API_KEY or a CLAUDE_CODE_OAUTH_TOKEN repository secret.
 #
+# Until both the app and a secret are in place, the steps skip and the job
+# passes, so a fork or a fresh copy of the template shows no red check.
+#
+# The gate is on the step, not the job, because the `secrets` and `env` contexts
+# are not available when a job-level `if` is evaluated. Setting `env` on the job
+# and testing it on the step is the form that works.
+#
 # With no `prompt` input, the action runs in interactive mode: Claude waits for
 # the trigger phrase and responds in a comment on the issue or PR.
 
@@ -26,12 +33,22 @@ jobs:
       issues: write
       id-token: write
       actions: read
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     steps:
+      - name: Report that Claude is not configured
+        if: env.HAS_KEY != 'true'
+        run: |
+          echo "Skipped: no ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret."
+          echo "Run /install-github-app from Claude Code to set this up."
+
       - uses: actions/checkout@v6
+        if: env.HAS_KEY == 'true'
         with:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
+        if: env.HAS_KEY == 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Using a Claude subscription instead of an API key? Replace the line

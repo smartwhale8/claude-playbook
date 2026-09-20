@@ -52,17 +52,30 @@ jobs:
   eval:
     name: Eval suite
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    # The gate is on the steps, not the job: the `secrets` and `env` contexts
+    # are not available when a job-level `if` is evaluated, so a job-level gate
+    # on a secret silently never matches.
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
+      - name: Report that the evals need a key
+        if: env.ANTHROPIC_API_KEY == ''
+        run: |
+          echo "Skipped: no ANTHROPIC_API_KEY secret."
+          echo "The eval suite calls the API, so it runs only when a key is set."
+
       - uses: actions/checkout@v6
+        if: env.ANTHROPIC_API_KEY != ''
 
       - name: Install Claude Code
+        if: env.ANTHROPIC_API_KEY != ''
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Run the eval suite
         if: env.ANTHROPIC_API_KEY != ''
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           claude plugin eval . \
             --threshold 0.8 \

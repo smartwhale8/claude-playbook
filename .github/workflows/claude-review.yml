@@ -4,6 +4,15 @@
 # does not wait for an @claude mention. The checkout step is what makes the
 # skill in .claude/skills/ available on the runner.
 #
+# Requires the Claude GitHub App (https://github.com/apps/claude) installed on
+# the repository, plus an ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret.
+# Run /install-github-app from Claude Code to do both at once. Until then the
+# steps skip and the job passes, so a fresh copy of the template shows no red
+# check on its first pull request.
+#
+# The gate is on the step, not the job, because the `secrets` and `env` contexts
+# are not available when a job-level `if` is evaluated.
+#
 # On a public repository, GitHub withholds secrets from fork pull requests, so
 # this runs only on branches in the same repository.
 
@@ -22,12 +31,22 @@ jobs:
       pull-requests: write
       issues: read
       id-token: write
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     steps:
+      - name: Report that Claude is not configured
+        if: env.HAS_KEY != 'true'
+        run: |
+          echo "Skipped: no ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret."
+          echo "Run /install-github-app from Claude Code to set this up."
+
       - uses: actions/checkout@v6
+        if: env.HAS_KEY == 'true'
         with:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
+        if: env.HAS_KEY == 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: "/review-pr ${{ github.event.pull_request.number }}"
