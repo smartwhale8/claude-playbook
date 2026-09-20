@@ -1,7 +1,7 @@
 {
   "name": "claude-playbook",
   "displayName": "Claude Playbook",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Engineering guardrails for Claude Code: path-scoped rules, review and verification skills, specialist subagents, and hooks that enforce what instructions only request.",
   "author": {
     "name": "smartwhale8",

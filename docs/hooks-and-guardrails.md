@@ -161,8 +161,11 @@ matches `manual|auto`. `Stop` takes no matcher and always fires.
 Each is a starting point. Edit `PATTERNS` in the guard to match your project, and
 set `PLAYBOOK_TEST_COMMAND` for the test gate.
 
-All four require `jq`, and each exits silently without it rather than failing
-the tool call.
+The lint and session hooks use `jq` and do nothing without it. The guardrail
+never goes quiet: it reads the command with `jq`, falls back to `python3`, and
+failing both matches its patterns against the raw payload and says so in the
+reason it returns. A security control that cannot read its input must not wave
+the input through.
 
 ## Permissions do some of this without a script
 

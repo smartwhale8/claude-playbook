@@ -6,14 +6,14 @@
     "url": "https://github.com/smartwhale8"
   },
   "description": "Engineering guardrails for Claude Code.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "plugins": [
     {
       "name": "claude-playbook",
       "source": "./",
       "displayName": "Claude Playbook",
       "description": "Path-scoped rules, review and verification skills, specialist subagents, and enforcement hooks.",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "category": "productivity",
       "keywords": [
         "code-review",

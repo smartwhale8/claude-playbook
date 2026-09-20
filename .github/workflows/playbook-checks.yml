@@ -31,11 +31,17 @@ jobs:
           shellcheck .claude/hooks/*.sh
 
       - name: Check every JSON file parses
+        # Checks the files that are present. A project built from this template
+        # may legitimately delete the plugin manifests or the hooks directory,
+        # and that must not turn its build red.
         run: |
-          for f in .claude/settings.json hooks/hooks.json \
-                   .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
-            python3 -c "import json,sys; json.load(open('$f'))" && echo "ok  $f"
-          done
+          found=0
+          while IFS= read -r f; do
+            python3 -c "import json,sys; json.load(open('$f'))"
+            echo "ok  $f"
+            found=$((found + 1))
+          done < <(find .claude .claude-plugin hooks -name '*.json' -type f 2>/dev/null | sort)
+          echo "$found JSON file(s) checked"
 
       - name: Report the always-loaded rule budget
         run: |

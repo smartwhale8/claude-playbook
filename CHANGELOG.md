@@ -4,6 +4,36 @@ All notable changes to this playbook. Versions follow
 [semantic versioning](https://semver.org). "Breaking" means a change that alters
 what an existing user's `.claude/` directory does.
 
+## [2.0.1] - 2026-09-20
+
+Fixes for people adopting the playbook, found by testing it as a new user would
+experience it rather than as its author.
+
+### Fixed
+
+- **The guardrail hook failed open without `jq`.** It exited 0 when no JSON
+  parser was available, so `rm -rf /` passed with no output and no warning. It
+  now tries `jq`, falls back to `python3`, and failing both matches its patterns
+  against the raw payload and says so in the reason it returns. A broken or
+  empty parser result falls through instead of ending the check. With no `grep`
+  at all it refuses the call rather than allowing it.
+- **The CI JSON check broke any project that deleted files.** It named
+  `.claude-plugin/plugin.json` and `hooks/hooks.json` explicitly, so a template
+  user who removed the plugin manifests, which is a reasonable thing to do, got
+  `FileNotFoundError` and a red build. It now checks the JSON files that are
+  present.
+- Four places described every hook as exiting silently without `jq`, which is no
+  longer true of the guardrail and was the wrong promise for a security control.
+
+### Changed
+
+- The README opens with a **Before you install** section naming the two
+  prerequisites, `jq` and reading the hook scripts. `jq` was previously a clause
+  in the middle of the hooks section.
+- Added **Your first fifteen minutes**: fill in the commands, delete the
+  irrelevant rules, check the path globs, then try `/review`, `/verify` and
+  `/context`. The setup steps were previously spread across three sections.
+
 ## [2.0.0] - 2026-09-20
 
 Tested against Claude Code v2.1.263.
