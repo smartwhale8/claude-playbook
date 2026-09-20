@@ -7,7 +7,7 @@ Rules that load only when they apply, skills for review and verification,
 subagents that keep exploration out of your context, and hooks that enforce what
 instructions can only request.
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue)](CHANGELOG.md)
 [![Tested with Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.263-orange)](docs/whats-new.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -20,7 +20,9 @@ instructions can only request.
 ## Contents
 
 - [Why this exists](#why-this-exists)
+- [Before you install](#before-you-install)
 - [Install](#install)
+- [Your first fifteen minutes](#your-first-fifteen-minutes)
 - [What you get](#what-you-get)
 - [How the pieces fit together](#how-the-pieces-fit-together)
 - [The components, one at a time](#the-components-one-at-a-time)
@@ -60,6 +62,31 @@ precedence model, and half the frontmatter documented here changed since the
 first release. Rules are now path-scoped, which cut the always-loaded context
 by 82%. See [what's new](docs/whats-new.md) and the
 [changelog](CHANGELOG.md).
+
+---
+
+## Before you install
+
+Two things, both quick.
+
+**1. Install `jq`.** Every hook needs it to read its input.
+
+```bash
+brew install jq        # macOS
+sudo apt install jq    # Debian, Ubuntu
+```
+
+Without it the lint hook does nothing, and the guardrail hook falls back to a
+less precise check and tells you so. Nothing breaks, but you are not getting
+what you installed.
+
+**2. Read the four hook scripts.** They run automatically, so they are code you
+are choosing to trust. About 200 lines in total, in `.claude/hooks/`.
+[SECURITY.md](SECURITY.md) says what they do and why you should check rather
+than take that on trust.
+
+Claude Code v2.1.196 or later covers everything here. Some tooling wants a newer
+version; the [compatibility table](#compatibility) lists which.
 
 ---
 
@@ -107,10 +134,36 @@ cp /tmp/playbook/.mcp.json.example .          # optional, inert until renamed
 Then read [Make it yours](#make-it-yours). Copying it unchanged gets you maybe
 half the value.
 
-> **Before you run any of this**, read [SECURITY.md](SECURITY.md). Hooks are
-> executable code that runs automatically. That is true of every playbook,
-> including this one, and reviewing four short shell scripts is the price of
-> using one.
+---
+
+## Your first fifteen minutes
+
+Do these four in order and the playbook is working. Everything else is optional.
+
+**1. Fill in your commands.** Open `.claude/CLAUDE.md` and replace the
+placeholder build, test, lint and type-check commands with the real ones. The
+`/verify` skill runs exactly these, so this step is what makes verification
+work. Run `/init` first if you want Claude to draft the file from your code.
+
+**2. Delete the rules that do not apply.** No database? Delete
+`.claude/rules/database.md` and `alembic.md`. No frontend? Delete `frontend.md`
+and `frontend-consistency.md`. No LLM calls? Delete `llm-prompts.md`.
+
+**3. Check the path globs match your layout.** The scoped rules assume
+`src/api/`, `**/components/**`, `**/models/**`. If your API lives somewhere
+else, edit the `paths:` list at the top of the rule. A glob that matches nothing
+fails silently, so nobody tells you the rule never loaded.
+
+**4. Try it.** Make a small change, then run:
+
+```
+/review        reviews your uncommitted changes against the rules
+/verify        runs your checks and reports the output, not a claim
+/context       shows what the playbook costs you per session
+```
+
+If `/context` surprises you, that is the point. See
+[context and cost](docs/context-and-cost.md).
 
 ---
 
@@ -435,8 +488,11 @@ must hold every time belongs here.
 | `session-context.sh` | `SessionStart` | Yes | Adds the branch, uncommitted file count, and last five commits. Saves three tool calls per session. |
 | `require-green-tests.sh` | `Stop` | No | Blocks the turn from ending while tests fail. The strongest verification gate here. Header comment has the settings block. |
 
-All four need `jq`, and exit silently without it rather than failing your tool
-call.
+The lint and session hooks use `jq` and do nothing without it. The guardrail
+never goes quiet: it reads the command with `jq`, falls back to `python3`, and
+failing both matches its patterns against the raw payload and says so in the
+reason it returns. A security control that cannot read its input must not wave
+the input through.
 
 **How registration works.** In `.claude/settings.json`, never in the script:
 
@@ -694,8 +750,9 @@ Tested against **Claude Code v2.1.263** on macOS.
 The rules, skills, agents, and hooks work on any recent version. Only the
 tooling above has a floor.
 
-Hook scripts need `jq`. They exit silently without it. They are tested on macOS
-and have not been exercised on Windows.
+Hook scripts use `jq`, falling back to `python3` and then to a raw-text match
+in the guardrail. They are tested on macOS and have not been exercised on
+Windows.
 
 ---
 

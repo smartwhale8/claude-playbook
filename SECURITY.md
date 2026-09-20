@@ -38,7 +38,10 @@ destructive shell patterns, and add your git branch and recent commits at
 session start. They make no network requests, send nothing anywhere, and read no
 file outside your project.
 
-They require `jq` and exit silently without it.
+They use `jq` to read their input. The lint and session hooks do nothing
+without it. The guardrail falls back to `python3`, then to matching its patterns
+against the raw payload, and refuses the call outright if `grep` is missing: it
+never allows a command it could not check.
 
 ## When you adopt it
 
