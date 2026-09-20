@@ -1,28 +1,42 @@
 ---
 name: review-pr
-description: Review a pull request for quality, security, and correctness
+description: Review a pull request for correctness, architecture, security, and test coverage. Use when the user names a PR number to review.
 disable-model-invocation: true
+argument-hint: "[pr-number]"
+allowed-tools: Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr checks *), Read, Grep, Glob
+context: fork
+agent: code-reviewer
+background: false
 ---
 
-Review pull request: $ARGUMENTS
+# Review pull request $ARGUMENTS
 
-Follow this checklist:
+## The pull request
 
-1. **Read the PR**: Run `gh pr view $ARGUMENTS` and `gh pr diff $ARGUMENTS`
-2. **Understand scope**: What is this PR trying to accomplish?
-3. **Review for correctness**:
-   - Does the code do what it claims?
-   - Are there edge cases not handled?
-   - Are there off-by-one errors, null pointer risks, or race conditions?
-4. **Review for architecture**:
-   - Does this follow existing patterns in the codebase?
-   - Is there code duplication that should be extracted?
-   - Are new dependencies justified?
-5. **Review for security**:
-   - Input validation on external data?
-   - SQL injection, XSS, or other OWASP risks?
-   - Secrets or credentials exposed?
-6. **Review for testing**:
-   - Are new behaviors covered by tests?
-   - Are edge cases tested?
-7. **Summarize**: Provide a clear summary with specific, actionable feedback
+!`gh pr view $ARGUMENTS 2>&1 || echo "Could not read PR $ARGUMENTS."`
+
+## The diff
+
+!`gh pr diff $ARGUMENTS 2>&1 | head -1500 || true`
+
+## What to check
+
+1. **Intent.** What is this pull request for? Does the diff do that, and only that?
+
+2. **Correctness.** Trace the changed paths. Unhandled edge cases, off-by-one errors, null and undefined paths, race conditions, error paths that cannot be reached.
+
+3. **Fit.** Does the change follow the patterns already in this codebase? Read the neighbouring files rather than assuming. Name any duplication with the path to the original. Are new dependencies justified?
+
+4. **Security.** Input validation at the boundary, parameterized queries, escaped output, authorization checks on new endpoints, no secrets in the diff.
+
+5. **Tests.** Is each new behaviour covered? Does a bug fix carry a regression test? Are the edge cases tested, or only the happy path?
+
+6. **CI.** Check `gh pr checks $ARGUMENTS`. Do not approve over a red build.
+
+## Output
+
+Open with the verdict: approve, approve with comments, or request changes.
+
+Then the findings, ordered by severity. Each one names the file and line, states the problem, and gives the change that resolves it.
+
+Say plainly what you did not check, for example a subsystem you could not reach or a test you could not run. A review that hides its gaps is worse than a short one.

@@ -1,39 +1,39 @@
+---
+paths:
+  - "**/prompts/**/*"
+  - "**/*.{j2,jinja,jinja2}"
+---
+
 # LLM Prompt Management
 
-Standards for organizing, versioning, and maintaining LLM prompts in applications.
+<!-- Path-scoped to prompt files. Before 2026-09-20 this loaded in every session, -->
+<!-- including projects with no LLM calls at all. Delete this file if that is yours. -->
+<!-- Added 2026-02-15, scoped 2026-09-20. -->
 
-## Jinja2 Templates for Prompts
+## Prompts are files, not string literals
 
-- Store all LLM prompts as Jinja2 template files (`.j2` or `.jinja2` extension) — never hardcode prompts as string literals in application code
-- Template location: `prompts/` directory at the project root, organized by feature:
-  ```
-  prompts/
-  ├── coach/
-  │   ├── system.j2
-  │   ├── workout_plan.j2
-  │   └── nutrition_advice.j2
-  ├── moderation/
-  │   ├── content_review.j2
-  │   └── toxicity_check.j2
-  └── summarization/
-      └── thread_summary.j2
-  ```
-- This enables: version control diffs, code review of prompt changes, template reuse, and clear separation of prompts from code
+- Every prompt is a template file under `prompts/`, organised by feature.
+- No f-strings, no concatenation, no prompts in database rows or environment variables.
+- This is what makes a prompt change reviewable in a diff.
 
-## Template Structure
+```
+prompts/
+├── common/
+│   ├── safety_guidelines.j2
+│   └── output_format.j2
+└── coach/
+    ├── system.j2
+    └── workout_plan.j2
+```
 
-Each template should have a clear structure:
+## Template structure
 
 ```jinja2
-{#- Feature: Coach workout planning -#}
-{#- Model: claude-sonnet-4-5-20250929 -#}
+{#- Feature: coach workout planning -#}
+{#- Model: claude-sonnet-5 -#}
 {#- Version: 1.2 -#}
 
 You are a fitness coach helping {{ user_name }} plan their workouts.
-
-{% if fitness_level %}
-The user's fitness level is: {{ fitness_level }}
-{% endif %}
 
 {% if goals %}
 Their goals are:
@@ -41,42 +41,15 @@ Their goals are:
 - {{ goal }}
 {% endfor %}
 {% endif %}
-
-{{ instructions }}
 ```
 
-- Header comment: feature name, target model, version
-- Use Jinja2 variables (`{{ }}`) for dynamic content — user data, context, retrieved information
-- Use conditionals (`{% if %}`) for optional sections — don't include empty sections
-- Use loops (`{% for %}`) for lists of items — examples, goals, history entries
+- Header comment records the feature, the target model, and the version.
+- Conditionals keep empty sections out of the rendered prompt.
+- Shared instructions live in `prompts/common/` and are pulled in with `{% include %}`.
 
-## Prompt Versioning
+## Handling
 
-- Prompt changes are code changes — they go through the same review process as application code
-- Use meaningful commit messages for prompt changes: "Improve coach tone for beginner users" — not "update prompt"
-- When a prompt change significantly affects behavior, note it in the PR description
-- Keep a version comment in each template header to track iterations
-
-## Prompt Composition
-
-- Break large prompts into reusable partials using Jinja2 includes:
-  ```jinja2
-  {% include "common/safety_guidelines.j2" %}
-  {% include "common/output_format.j2" %}
-  ```
-- System prompts, user message templates, and output format instructions should be separate templates
-- Shared instructions (safety, formatting, tone) live in `prompts/common/` and are included where needed
-
-## Variables and Context
-
-- Define a clear interface for each template: document what variables it expects
-- Use Jinja2's `default` filter for optional variables: `{{ tone | default("friendly") }}`
-- Never pass unsanitized user input directly into prompt templates — escape or validate first
-- Keep template variables typed in the application code that renders them
-
-## Anti-Patterns
-
-- Never concatenate prompts with f-strings or `+` in application code — use Jinja2 templates
-- Never store prompts in database rows or environment variables — they belong in version-controlled files
-- Never duplicate prompt text across templates — extract shared sections into includes
-- Don't over-engineer prompt pipelines — a simple `jinja2.Environment` with `FileSystemLoader` is sufficient for most projects
+- Document the variables each template expects, and type them where they are rendered.
+- Use the `default` filter for optional values.
+- Validate or escape user input before it reaches a template.
+- A `jinja2.Environment` with a `FileSystemLoader` is enough. Do not build a prompt framework.

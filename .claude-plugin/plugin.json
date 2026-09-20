@@ -1,0 +1,29 @@
+{
+  "name": "claude-playbook",
+  "displayName": "Claude Playbook",
+  "version": "2.0.0",
+  "description": "Engineering guardrails for Claude Code: path-scoped rules, review and verification skills, specialist subagents, and hooks that enforce what instructions only request.",
+  "author": {
+    "name": "smartwhale8",
+    "url": "https://github.com/smartwhale8"
+  },
+  "homepage": "https://github.com/smartwhale8/claude-playbook",
+  "repository": "https://github.com/smartwhale8/claude-playbook",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "guardrails",
+    "hooks",
+    "verification",
+    "engineering-standards"
+  ],
+  "skills": "./.claude/skills/",
+  "agents": [
+    "./.claude/agents/code-reviewer.md",
+    "./.claude/agents/explorer.md",
+    "./.claude/agents/security-reviewer.md",
+    "./.claude/agents/test-writer.md"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "workflows": "./.claude/workflows/"
+}

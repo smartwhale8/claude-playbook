@@ -1,40 +1,22 @@
 # Code Quality
 
-These principles are non-negotiable. Evaluate every code change against them before implementation.
+<!-- Core rule. Loads in every session. Added 2026-02-15, trimmed 2026-09-20. -->
+<!-- Why this rule exists: Claude will accept a workaround if nothing tells it not to. -->
 
-## No Dead Code
+## Fix the cause, not the symptom
 
-- Actively remove unused functions, classes, imports, variables, and commented-out code
-- Never leave dead code "just in case" — version control is the safety net
-- When removing a feature or refactoring, delete all traces: implementations, re-exports, stubs, `# removed` comments
-- If a model, function, or variable has zero references, it gets deleted — not commented out, not left with a TODO
+- Before writing a fix, state what the root cause is. If you cannot name it, keep investigating.
+- Reject fixes that suppress a warning, swallow an exception, add a flag to skip a broken path, or wrap the problem.
+- When the proper fix is larger, say why it is the right one and do it. Never present a workaround as an option.
 
-## Root-Cause Fixes Only
+## Delete dead code
 
-- Every fix must address the root cause, not the symptom
-- Before implementing any fix, ask: **"Is this a workaround or a proper solution?"**
-- Reject fixes that: suppress warnings, silence errors with try/except, add flags to skip broken paths, or wrap problems rather than solving them
-- If the first solution that comes to mind is a patch — stop, investigate deeper, find the architectural fix
+- Remove unused functions, classes, imports, variables, and commented-out blocks as you find them.
+- When removing a feature, delete every trace: the implementation, re-exports, stubs, and the comments about it.
+- Version control is the safety net. Nothing is kept "just in case".
 
-## No Shortcuts
+## Do what was asked and stop
 
-- Follow solid architecture even when the proper fix requires more work
-- If the right solution means removing duplicate code, refactoring imports, or restructuring modules — do that work
-- Quick hacks compound into unmaintainable systems; always choose the clean path
-- Don't add compatibility shims, feature flags for dead paths, or defensive code for impossible states
-
-## Proactive Evaluation
-
-- Before writing any fix, explicitly evaluate: "Is this a bandaid?"
-- If yes, reject it and find the proper fix before writing code
-- When proposing solutions, present only proper fixes — never offer a "quick workaround" as an option
-- If a proper fix is significantly more complex, explain why it's worth the effort — don't default to the easy path
-
-## No Over-Engineering
-
-- Only make changes that are directly requested or clearly necessary
-- Don't add features, refactor surrounding code, or make "improvements" beyond what was asked
-- Don't add error handling for scenarios that can't happen, or validation for internal-only code paths
-- Don't create helpers, utilities, or abstractions for one-time operations
-- Three similar lines of code is better than a premature abstraction
-- The right amount of complexity is the minimum needed for the current task
+- Change what was requested and what is clearly necessary for it to work. Nothing else.
+- No error handling for states that cannot occur, no validation on internal-only paths, no helper for a single call site.
+- Three similar lines beat a premature abstraction. Abstract on the third real case, not the first.

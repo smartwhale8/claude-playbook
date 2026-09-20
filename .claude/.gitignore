@@ -1,2 +1,8 @@
-# Personal/local files — never commit
+# Personal settings, never committed.
+# Claude Code adds this to your global git excludes the first time it writes the
+# file, so this entry is a backstop for a file you created by hand.
 settings.local.json
+
+# Personal project instructions. Note that a CLAUDE.local.md in your working
+# directory stops Claude reading AGENTS.md by default. See AGENTS.md.
+CLAUDE.local.md

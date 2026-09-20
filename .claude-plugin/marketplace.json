@@ -1,0 +1,27 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "claude-playbook",
+  "owner": {
+    "name": "smartwhale8",
+    "url": "https://github.com/smartwhale8"
+  },
+  "description": "Engineering guardrails for Claude Code.",
+  "version": "2.0.0",
+  "plugins": [
+    {
+      "name": "claude-playbook",
+      "source": "./",
+      "displayName": "Claude Playbook",
+      "description": "Path-scoped rules, review and verification skills, specialist subagents, and enforcement hooks.",
+      "version": "2.0.0",
+      "category": "productivity",
+      "keywords": [
+        "code-review",
+        "guardrails",
+        "hooks",
+        "verification"
+      ],
+      "license": "MIT"
+    }
+  ]
+}

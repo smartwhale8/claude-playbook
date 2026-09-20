@@ -1,50 +1,37 @@
+---
+paths:
+  - "**/models/**/*"
+  - "**/repositories/**/*"
+  - "**/migrations/**/*"
+  - "**/db/**/*"
+  - "**/*.sql"
+  - "**/*{Model,Repository,Entity}.{ts,js,py,go,rb,java,kt}"
+---
+
 # Database
 
-Standards for schema design, data access, and migrations.
+<!-- Path-scoped. Loads only when Claude opens a model, repository, migration, -->
+<!-- or SQL file. Added 2026-02-15, scoped and trimmed 2026-09-20. -->
 
-## Schema Design
+## Schema
 
-- Every table has a primary key — prefer UUIDs for distributed systems, auto-increment integers for simpler apps
-- Every table has `created_at` timestamp — most should also have `updated_at`
-- Use soft deletes (`deleted_at` timestamp) for user-facing data that may need recovery; hard deletes for transient data
-- Foreign keys must specify `ON DELETE` behavior (`CASCADE`, `SET NULL`, `RESTRICT`) — never leave it as the implicit default
-- Add `UNIQUE` constraints for natural keys (email, username, relationship pairs like follower+followed)
-- Add `CHECK` constraints for business rules enforceable at the DB level (e.g., no self-referencing relationships, positive amounts)
-- Add indexes on columns used in `WHERE`, `JOIN`, `ORDER BY` — especially foreign keys and timestamps
+- Every table has a primary key and a `created_at`. Most need `updated_at`.
+- Every foreign key states its `ON DELETE` behaviour explicitly. The implicit default is never the intent.
+- Natural keys get a `UNIQUE` constraint. Business rules that the database can check get a `CHECK` constraint.
+- Index the columns used in `WHERE`, `JOIN`, and `ORDER BY`, starting with foreign keys and timestamps.
+- Constraints live in the database, not only in application code. Application-level uniqueness checks lose races.
 
-## One Model, One Location
+## Queries
 
-- Each database table is defined by exactly one model/schema class in one file
-- Other modules that need the model import it from the canonical location — never redefine
-- If you find the same table defined in two files, delete the duplicate immediately
+- **No N+1.** Never query inside a loop over results. Batch with `WHERE id IN (...)` or eager-load the relation.
+- Parameterized queries only.
+- Select the columns you need. Do not eager-load relations you will not read.
+- Every list query has a `LIMIT`.
+- Writes that span tables run in one transaction.
 
 ## Migrations
 
-- Every schema change goes through a migration — never modify the database manually
-- Each migration does one thing — don't bundle unrelated schema changes
-- Migrations must be reversible — implement both up and down operations
-- Use idempotent operations where possible (`IF NOT EXISTS`, `IF EXISTS`)
-- Test both upgrade and downgrade paths before committing
-- Never modify a migration that has already been applied to shared environments — create a new migration instead
-
-## Query Patterns
-
-- **No N+1 queries**: Never execute database queries inside a loop over results. Batch-fetch related data with `WHERE id IN (...)` or use eager loading (join/subquery loading)
-- **Parameterized queries only**: Never string-interpolate user input into queries — use the ORM's query builder or parameterized statements
-- **Select only what you need**: Don't `SELECT *` when you need 3 columns — specify fields to reduce data transfer
-- **Paginate everything**: Every list query must have a LIMIT — never return unbounded result sets
-- **Use transactions**: Group related writes in a single transaction — don't leave data in an inconsistent state if one write fails
-
-## Connection Management
-
-- Use connection pooling in production — don't open a new connection per request
-- Set reasonable pool sizes, timeouts, and max overflow limits
-- Implement connection retry logic for transient failures (especially with cloud databases)
-- Always close/return connections after use — use context managers or dependency injection to prevent leaks
-
-## Data Integrity
-
-- Enforce constraints at the database level, not just in application code — the database is the last line of defense
-- Use transactions for operations that modify multiple tables
-- Avoid storing derived data that can be computed — if you must (for performance), document it and keep it synchronized
-- Never trust application-level uniqueness checks alone — race conditions exist; use database constraints
+- Every schema change is a migration. Nobody edits the database by hand.
+- One logical change per migration, with a working reverse.
+- Never edit a migration that has run in a shared environment. Write a new one.
+- Test the upgrade and the downgrade before committing.
