@@ -1,49 +1,58 @@
 ---
 name: review
-description: Review all uncommitted changes against project standards before committing
+description: Review uncommitted changes against the project rules before committing. Use when the user asks for a review of their working tree, asks whether changes are ready to commit, or says they are about to commit.
 disable-model-invocation: true
+argument-hint: "[optional focus, e.g. security]"
+allowed-tools: Bash(git diff *), Bash(git status *), Bash(git log *), Read, Grep, Glob
+context: fork
+agent: code-reviewer
+background: false
 ---
 
-Review all uncommitted changes in this project. $ARGUMENTS
+# Review uncommitted changes
 
-## Process
+Focus for this review, if the user gave one: $ARGUMENTS
 
-1. **Gather changes**: Run `git diff --staged` for staged changes, or `git diff` if nothing is staged. Also check `git status` for new untracked files.
+## The changes
 
-2. **Check each changed file against the project rules** (`.claude/rules/*.md`):
+Staged:
 
-   ### Code Quality
-   - Is there dead code, unused imports, or commented-out code?
-   - Are there bandaid fixes or workarounds instead of root-cause solutions?
-   - Is anything over-engineered for what it needs to do?
+!`git diff --staged --stat || true`
 
-   ### Architecture
-   - Does this follow existing patterns in the codebase?
-   - Is there duplicate logic that should use an existing shared component or utility?
-   - Are dependencies pointing in the right direction (inward, not outward)?
+Unstaged:
 
-   ### Consistency
-   - Does the code match the style and structure of similar files in the project?
-   - For frontend: are spacing, colors, and component usage consistent with the rest of the UI?
-   - For backend: are error handling, response format, and validation patterns consistent?
+!`git diff --stat || true`
 
-   ### Reuse
-   - Could any new component, function, or pattern already exist in the codebase? Search before approving.
-   - If something similar exists, flag it — it should be reused or extracted into a shared utility.
+Untracked:
 
-   ### Security
-   - Any hardcoded secrets, credentials, or API keys?
-   - Is user input validated at the boundary?
-   - Are there SQL injection, XSS, or other OWASP risks?
+!`git status --porcelain | grep '^??' || true`
 
-   ### Performance
-   - Any N+1 query patterns (database calls inside loops)?
-   - Any unbounded queries missing LIMIT/pagination?
-   - Frontend: unnecessary re-renders, missing debounce on inputs?
+## What to do
 
-3. **Verdict**: Provide one of:
-   - **Ready to commit** — no issues found
-   - **Minor issues** — list them, but committing is acceptable after acknowledging
-   - **Needs changes** — list specific issues that must be fixed before committing
+1. Read the full diff. Use `git diff --staged` if anything is staged, otherwise `git diff`. Read untracked files directly.
+2. For each changed file, open the surrounding code. A change that is correct alone can still break the pattern of the module it lives in.
+3. Check the change against `.claude/rules/`. Path-scoped rules apply to the files they match.
+4. Search before reporting duplication. If a new helper or component looks like something that already exists, find the existing one and name it with its path.
 
-For each issue, provide: the file, the line(s), what's wrong, and what the fix should be.
+## What counts as a finding
+
+Report only what affects correctness, security, or the stated rules:
+
+- Dead code, commented-out blocks, or debug output left behind
+- A fix that treats a symptom instead of the cause
+- Logic that duplicates something already in the codebase, with the path to the original
+- A hardcoded secret, an unparameterized query, unescaped user content, a missing authorization check
+- A query inside a loop, or a list read with no limit
+- A new behaviour with no test, or a bug fix with no regression test
+
+Style preferences are not findings. Neither is a possible future problem.
+
+## Output
+
+One verdict, then the findings.
+
+- **Ready to commit.** Nothing blocking. Say what you checked.
+- **Minor issues.** List them. Committing is reasonable once the author has seen them.
+- **Needs changes.** List what must be fixed first.
+
+Each finding gives the file and line, what is wrong, and the specific change that fixes it.

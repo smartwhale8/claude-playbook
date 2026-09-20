@@ -1,23 +1,37 @@
 ---
 name: fix-issue
-description: Analyze and fix a GitHub issue end-to-end
+description: Resolve a GitHub issue end to end, from reading the issue through to opening a pull request. Use when the user names an issue number to fix.
 disable-model-invocation: true
+argument-hint: "[issue-number]"
+allowed-tools: Bash(gh issue view *), Bash(gh pr create *), Bash(git *), Read, Edit, Write, Grep, Glob
 ---
 
-Analyze and fix the GitHub issue: $ARGUMENTS
+# Fix issue $ARGUMENTS
 
-Follow this workflow:
+## The issue
 
-1. **Understand**: Run `gh issue view $ARGUMENTS` to get issue details
-2. **Investigate**: Search the codebase for relevant files and understand the root cause
-3. **Plan**: Describe your approach before making changes
-4. **Implement**: Make the necessary code changes
-5. **Test**: Write a test that would have caught this issue, then run the test suite
-6. **Verify**: Ensure lint and type checks pass
-7. **Commit**: Create a descriptive commit message referencing the issue
-8. **PR**: Push and create a PR with `gh pr create`
+!`gh issue view $ARGUMENTS 2>&1 || echo "Could not read issue $ARGUMENTS. Check the number and that gh is authenticated."`
 
-Important:
-- Address the ROOT CAUSE, not just the symptom
-- If the fix requires changes across multiple files, explain why
-- If the issue is unclear, ask for clarification before implementing
+## Workflow
+
+1. **Understand.** Read the issue above. If the expected behaviour is ambiguous, ask before writing code. A wrong fix costs more than a question.
+
+2. **Reproduce.** Find the failing behaviour in the code. Do not proceed on a theory you have not confirmed.
+
+3. **Plan.** State the root cause and the change you intend, before editing. If the cause is unclear, say so instead of guessing.
+
+4. **Branch.** `git switch -c fix/<short-description>`. Never commit to the default branch.
+
+5. **Test first.** Write a test that fails because of this bug. Run it and watch it fail. A regression test that never failed proves nothing.
+
+6. **Fix.** Address the cause. If the fix spans several files, explain why in the pull request.
+
+7. **Verify.** Run the new test, then the full suite, then lint and type checks. Paste what the commands returned. Never assert success without the output.
+
+8. **Commit and open the pull request.** Reference the issue. The description covers what changed, why, how it was verified, and any risk.
+
+## Rules
+
+- The root cause, never the symptom. If the first idea is a workaround, keep looking.
+- Do not change anything the issue did not ask for.
+- If the fix turns out to need a decision that is not yours to make, stop and report what you found.

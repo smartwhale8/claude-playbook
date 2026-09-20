@@ -1,35 +1,80 @@
-#!/bin/bash
-# Hook: Run linter after file edits
-# Register in .claude/settings.json under PostToolUse for the Edit/Write tools
+#!/usr/bin/env bash
 #
-# Example settings.json entry:
-# {
-#   "hooks": {
-#     "PostToolUse": [
-#       {
-#         "matcher": "Edit|Write",
-#         "command": ".claude/hooks/lint-on-edit.sh \"$TOOL_INPUT_FILE_PATH\""
-#       }
-#     ]
-#   }
-# }
+# PostToolUse hook: lint the file Claude just edited and report failures back.
+#
+# Contract (https://code.claude.com/docs/en/hooks):
+#   - Hook input arrives as JSON on stdin, not as arguments.
+#   - The edited path is `.tool_input.file_path`.
+#   - Exit 0 and print JSON on stdout to hand Claude the linter output. Printing
+#     the failures as `additionalContext` is what makes Claude fix them; a hook
+#     that silently swallows linter output teaches Claude nothing.
+#
+# Registered in .claude/settings.json under PostToolUse with matcher "Edit|Write".
+# Requires jq (https://jqlang.org). Without jq the hook exits 0 and does nothing.
 
-FILE_PATH="$1"
+set -uo pipefail
 
-if [ -z "$FILE_PATH" ]; then
+if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-EXTENSION="${FILE_PATH##*.}"
+INPUT=$(cat)
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty')
 
-case "$EXTENSION" in
+if [ -z "$FILE_PATH" ] || [ ! -f "$FILE_PATH" ]; then
+  exit 0
+fi
+
+OUTPUT=""
+STATUS=0
+
+case "${FILE_PATH##*.}" in
   py)
-    ruff check "$FILE_PATH" --fix --quiet 2>/dev/null
+    if command -v ruff >/dev/null 2>&1; then
+      OUTPUT=$(ruff check --fix "$FILE_PATH" 2>&1)
+      STATUS=$?
+    fi
     ;;
-  ts|tsx|js|jsx)
-    npx eslint "$FILE_PATH" --fix --quiet 2>/dev/null
+  ts|tsx|js|jsx|mjs|cjs)
+    if [ -f package.json ] && command -v npx >/dev/null 2>&1; then
+      OUTPUT=$(npx --no-install eslint --fix "$FILE_PATH" 2>&1)
+      STATUS=$?
+    fi
+    ;;
+  go)
+    if command -v gofmt >/dev/null 2>&1; then
+      OUTPUT=$(gofmt -l -w "$FILE_PATH" 2>&1)
+      STATUS=$?
+    fi
+    ;;
+  rs)
+    if command -v rustfmt >/dev/null 2>&1; then
+      OUTPUT=$(rustfmt --edition 2021 "$FILE_PATH" 2>&1)
+      STATUS=$?
+    fi
+    ;;
+  sh|bash)
+    if command -v shellcheck >/dev/null 2>&1; then
+      OUTPUT=$(shellcheck "$FILE_PATH" 2>&1)
+      STATUS=$?
+    fi
     ;;
   *)
-    # No linter configured for this file type
+    exit 0
     ;;
 esac
+
+# The linter passed, or it auto-fixed everything it could. Say nothing.
+if [ "$STATUS" -eq 0 ] || [ -z "$OUTPUT" ]; then
+  exit 0
+fi
+
+# Hand the remaining failures to Claude so it fixes them in this turn.
+jq -n --arg ctx "Lint failed for $FILE_PATH. Fix these before continuing:
+$OUTPUT" '{
+  hookSpecificOutput: {
+    hookEventName: "PostToolUse",
+    additionalContext: $ctx
+  }
+}'
+exit 0

@@ -1,0 +1,39 @@
+# Respond to @claude mentions in issues and pull requests.
+#
+# Setup: run /install-github-app from Claude Code in this repository, which
+# installs the GitHub App, stores the credential, and opens a PR with this file.
+# To do it by hand: install https://github.com/apps/claude, then add either an
+# ANTHROPIC_API_KEY or a CLAUDE_CODE_OAUTH_TOKEN repository secret.
+#
+# With no `prompt` input, the action runs in interactive mode: Claude waits for
+# the trigger phrase and responds in a comment on the issue or PR.
+
+name: Claude
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  claude:
+    if: contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Using a Claude subscription instead of an API key? Replace the line
+          # above with:
+          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

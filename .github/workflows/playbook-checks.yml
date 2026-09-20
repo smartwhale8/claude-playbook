@@ -1,0 +1,78 @@
+# Check the playbook's own files on every change to them.
+#
+# Two levels of checking:
+#   - validate and shellcheck run on every push. They need no API credential.
+#   - The eval suite measures behaviour, so it costs tokens. It runs only when
+#     an ANTHROPIC_API_KEY secret exists.
+
+name: Playbook checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validate manifests and hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate the plugin and marketplace manifests
+        run: claude plugin validate . --strict
+
+      - name: Check every hook script
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck .claude/hooks/*.sh
+
+      - name: Check every JSON file parses
+        run: |
+          for f in .claude/settings.json hooks/hooks.json \
+                   .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+            python3 -c "import json,sys; json.load(open('$f'))" && echo "ok  $f"
+          done
+
+      - name: Report the always-loaded rule budget
+        run: |
+          words=$(for f in .claude/rules/*.md; do
+                    head -1 "$f" | grep -q '^---' || cat "$f"
+                  done | wc -w)
+          echo "Always-loaded rules: $words words (about $((words * 135 / 100)) tokens)"
+          if [ "$words" -gt 2000 ]; then
+            echo "::error::The always-loaded rule set has grown past 2000 words."
+            echo "Scope a rule to paths with frontmatter, or cut it."
+            exit 1
+          fi
+
+  eval:
+    name: Eval suite
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run the eval suite
+        if: env.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude plugin eval . \
+            --threshold 0.8 \
+            --trust-plugin \
+            --allow-tools Bash \
+            --json evals/result.json
+
+      - name: Upload the report
+        if: always() && hashFiles('evals/results/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: evals/results/

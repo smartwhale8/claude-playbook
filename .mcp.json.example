@@ -1,0 +1,29 @@
+{
+  "//": "Rename to .mcp.json to activate. This file is project scope: it is committed and shared with everyone who clones the repository. Personal servers belong in user scope via `claude mcp add --scope user`, not here.",
+
+  "//limit": "Every connected server costs context. Tool definitions are deferred by default, so only tool names and server instructions load until Claude uses one, but the names still add up. Prefer a CLI (gh, aws, gcloud, sentry-cli) over an MCP server when one exists: a CLI adds no per-tool listing at all. Run /context to see what your servers cost.",
+
+  "mcpServers": {
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
+    },
+
+    "internal-api": {
+      "type": "http",
+      "url": "${INTERNAL_API_URL:-https://api.internal.example.com}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${INTERNAL_API_TOKEN}"
+      }
+    },
+
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    }
+  }
+}
